@@ -1,0 +1,123 @@
+import { Post, Comment, User, Category } from './types';
+
+export const currentUser: User = {
+  id: 'u1',
+  name: '김개발',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+};
+
+export const categories: Category[] = [
+  { id: 'all', label: '전체글' },
+  { id: 'notice', label: '공지사항' },
+  { id: 'tech', label: '기술 공유' },
+  { id: 'qna', label: 'Q&A' },
+  { id: 'free', label: '자유게시판' },
+];
+
+export const mockPosts: Post[] = [
+  {
+    id: 'p1',
+    title: '서비스 점검 안내 (2/20)',
+    content: '안녕하세요. 2월 20일 새벽 2시부터 4시까지 서버 점검이 있을 예정입니다. 이용에 참고 부탁드립니다.',
+    author: { id: 'admin', name: '관리자', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-16T09:00:00Z',
+    viewCount: 1250,
+    commentCount: 5,
+    category: 'notice',
+    likes: 45,
+  },
+  {
+    id: 'p2',
+    title: 'React 19 새로운 기능 정리',
+    content: 'React 19에서 추가된 주요 기능들을 정리해보았습니다. Compiler 도입이 가장 큰 변화인 것 같네요...',
+    author: { id: 'u2', name: '이프론트', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-15T14:30:00Z',
+    viewCount: 342,
+    commentCount: 12,
+    category: 'tech',
+    likes: 89,
+  },
+  {
+    id: 'p3',
+    title: 'Tailwind CSS v4 마이그레이션 후기',
+    content: '생각보다 바뀐 게 많아서 고생 좀 했습니다. JIT 모드가 기본이 되면서 설정 파일이 많이 간소화되었네요.',
+    author: { id: 'u3', name: '박퍼블', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-14T11:20:00Z',
+    viewCount: 210,
+    commentCount: 8,
+    category: 'tech',
+    likes: 56,
+  },
+  {
+    id: 'p4',
+    title: '오늘 점심 메뉴 추천받습니다',
+    content: '회사 근처에 맛있는 곳이 없네요. 다들 뭐 드시나요?',
+    author: { id: 'u4', name: '최신입', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-16T11:50:00Z',
+    viewCount: 56,
+    commentCount: 23,
+    category: 'free',
+    likes: 12,
+  },
+  {
+    id: 'p5',
+    title: 'Supabase 연동 관련 질문있습니다',
+    content: 'RLS 설정하는데 자꾸 권한 오류가 나네요. 정책 설정을 어떻게 해야 할까요?',
+    author: { id: 'u5', name: '정백엔', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-13T16:45:00Z',
+    viewCount: 89,
+    commentCount: 4,
+    category: 'qna',
+    likes: 5,
+  },
+  {
+    id: 'p6',
+    title: '2025년 개발 트렌드 예상',
+    content: 'AI 코딩 어시스턴트의 발전이 가속화되면서 개발자의 역할이 어떻게 변할지...',
+    author: { id: 'u2', name: '이프론트', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-12T09:10:00Z',
+    viewCount: 450,
+    commentCount: 30,
+    category: 'tech',
+    likes: 120,
+  },
+  {
+    id: 'p7',
+    title: '재택근무 vs 사무실 출근',
+    content: '여러분은 어떤 근무 형태를 선호하시나요? 저는 하이브리드가 좋은 것 같아요.',
+    author: { id: 'u6', name: '한직장', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-11T18:30:00Z',
+    viewCount: 180,
+    commentCount: 45,
+    category: 'free',
+    likes: 34,
+  },
+  {
+    id: 'p8',
+    title: '넥스트JS App Router 사용해보신 분?',
+    content: 'Page Router에서 넘어가려는데 러닝커브가 좀 있네요. 팁 공유 부탁드립니다.',
+    author: { id: 'u4', name: '최신입', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    createdAt: '2025-02-16T10:00:00Z',
+    viewCount: 95,
+    commentCount: 15,
+    category: 'qna',
+    likes: 8,
+  },
+];
+
+export const mockComments: Comment[] = [
+  {
+    id: 'c1',
+    postId: 'p4',
+    author: { id: 'u2', name: '이프론트', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    content: '국밥이 최고죠!',
+    createdAt: '2025-02-16T12:00:00Z',
+  },
+  {
+    id: 'c2',
+    postId: 'p4',
+    author: { id: 'u3', name: '박퍼블', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80' },
+    content: '저는 샌드위치 먹었습니다 ㅎㅎ',
+    createdAt: '2025-02-16T12:05:00Z',
+  },
+];
