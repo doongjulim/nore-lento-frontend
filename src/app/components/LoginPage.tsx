@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Mail, Lock, Loader2, ArrowRight, User } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../config/api';
 
 interface LoginFormData {
   email: string;
@@ -16,6 +17,7 @@ export function LoginPage() {
   const { login, isAuthenticated } = useBoard();
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -29,12 +31,25 @@ export function LoginPage() {
   };
 
   const onFinalSubmit = async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    login(email);
-    toast.success(`${email}님 환영합니다!`);
-    navigate('/');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v2/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.message ?? '로그인에 실패했습니다.');
+        return;
+      }
+
+      login(email);
+      toast.success(`${email}님 환영합니다!`);
+      navigate('/');
+    } catch {
+      toast.error('서버에 연결할 수 없습니다.');
+    }
   };
 
   return (
@@ -147,6 +162,8 @@ export function LoginPage() {
                       id="password"
                       type="password"
                       placeholder="••••••••"
+                      value={password}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                     />
                   </div>

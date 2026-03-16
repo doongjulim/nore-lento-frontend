@@ -39,11 +39,11 @@ export const router = createBrowserRouter([
       { path: "/", Component: ShopPage },
       { path: "/shop", element: <Navigate to="/" replace /> },
       { path: "/shop/:id", Component: ProductDetailPage },
-      { path: "/board", Component: PostList },
+      { path: "/board", element: <Navigate to="/notice" replace /> },
+      { path: "/notice", element: <PostList category="notice" /> },
+      { path: "/qna", element: <PostList category="qna" /> },
+      { path: "/free", element: <PostList category="free" /> },
       { path: "/post/:id", Component: PostDetail },
-      { path: "/free", element: <Navigate to="/board" replace /> },
-      { path: "/qna", element: <Navigate to="/board" replace /> },
-      { path: "/tech", element: <Navigate to="/board" replace /> },
       // 로그인 필요 라우트
       {
         element: <RequireAuth />,

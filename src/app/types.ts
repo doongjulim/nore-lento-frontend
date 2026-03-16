@@ -20,12 +20,12 @@ export interface Post {
   createdAt: string;
   viewCount: number;
   commentCount: number;
-  category: 'notice' | 'free' | 'qna' | 'tech';
+  category: 'notice' | 'free' | 'qna';
   likes: number;
 }
 
 export type Category = {
-  id: 'all' | 'notice' | 'free' | 'qna' | 'tech';
+  id: 'notice' | 'free' | 'qna';
   label: string;
   icon?: React.ReactNode;
 };

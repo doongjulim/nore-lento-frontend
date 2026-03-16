@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import {
-  LayoutDashboard,
+  Megaphone,
   MessageSquare,
   Settings,
   Menu,
   X,
   Bell,
-  PenSquare,
+  HelpCircle,
   LogOut,
   LogIn,
   ShoppingBag,
@@ -58,9 +58,9 @@ export function BoardLayout({ children }: { children: React.ReactNode }) {
   ];
 
   const boardItems = [
-    { icon: LayoutDashboard, label: '전체 글', path: '/board' },
+    { icon: Megaphone, label: '공지사항', path: '/notice' },
+    { icon: HelpCircle, label: 'Q&A', path: '/qna' },
     { icon: MessageSquare, label: '자유게시판', path: '/free' },
-    { icon: PenSquare, label: '질문과 답변', path: '/qna' },
   ];
 
   const bottomItems = [
@@ -127,7 +127,7 @@ export function BoardLayout({ children }: { children: React.ReactNode }) {
             <p className="px-3 mb-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">게시판</p>
             <div className="space-y-0.5">
               {boardItems.map((item) => {
-                const isActive = location.pathname === item.path || (item.path !== '/board' && location.pathname.startsWith(item.path));
+                const isActive = location.pathname === item.path;
                 return (
                   <Link
                     key={item.path}

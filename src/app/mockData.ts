@@ -7,9 +7,7 @@ export const currentUser: User = {
 };
 
 export const categories: Category[] = [
-  { id: 'all', label: '전체글' },
   { id: 'notice', label: '공지사항' },
-  { id: 'tech', label: '기술 공유' },
   { id: 'qna', label: 'Q&A' },
   { id: 'free', label: '자유게시판' },
 ];
@@ -34,7 +32,7 @@ export const mockPosts: Post[] = [
     createdAt: '2025-02-15T14:30:00Z',
     viewCount: 342,
     commentCount: 12,
-    category: 'tech',
+    category: 'free',
     likes: 89,
   },
   {
@@ -45,7 +43,7 @@ export const mockPosts: Post[] = [
     createdAt: '2025-02-14T11:20:00Z',
     viewCount: 210,
     commentCount: 8,
-    category: 'tech',
+    category: 'free',
     likes: 56,
   },
   {
@@ -78,7 +76,7 @@ export const mockPosts: Post[] = [
     createdAt: '2025-02-12T09:10:00Z',
     viewCount: 450,
     commentCount: 30,
-    category: 'tech',
+    category: 'free',
     likes: 120,
   },
   {
