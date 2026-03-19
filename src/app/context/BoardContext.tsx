@@ -9,7 +9,7 @@ interface BoardContextType {
   addPost: (title: string, content: string, category: string) => void;
   addComment: (postId: string, content: string) => void;
   currentUser: User | null;
-  login: (email: string) => void;
+  login: (token: string) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -22,20 +22,51 @@ interface BoardContextType {
 
 const BoardContext = createContext<BoardContextType | undefined>(undefined);
 
+const TOKEN_KEY = 'nore_lento_token';
+
+function decodeJwtPayload(token: string): Record<string, any> {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return {};
+  }
+}
+
+function userFromToken(token: string): User | null {
+  try {
+    const payload = decodeJwtPayload(token);
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem(TOKEN_KEY);
+      return null;
+    }
+    return {
+      ...defaultUser,
+      name: payload.name ?? (payload.sub as string)?.split('@')[0] ?? 'User',
+      email: payload.sub ?? payload.email ?? '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function loadUserFromToken(): User | null {
+  const token = localStorage.getItem(TOKEN_KEY);
+  return token ? userFromToken(token) : null;
+}
+
 export function BoardProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [comments, setComments] = useState<Comment[]>(mockComments);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(loadUserFromToken);
   const [products, setProducts] = useState<Product[]>(initialProducts);
 
-  const login = (email: string) => {
-    setCurrentUser({
-      ...defaultUser,
-      name: email.split('@')[0] || 'User',
-    });
+  const login = (token: string) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    setCurrentUser(userFromToken(token));
   };
 
   const logout = () => {
+    localStorage.removeItem(TOKEN_KEY);
     setCurrentUser(null);
   };
 

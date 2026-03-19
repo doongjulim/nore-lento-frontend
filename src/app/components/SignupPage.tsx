@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Mail, Lock, User, Loader2, UserPlus } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../config/api';
 
 interface SignupFormData {
   name: string;
@@ -16,7 +17,7 @@ interface SignupFormData {
 export function SignupPage() {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<SignupFormData>();
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useBoard();
+  const { isAuthenticated } = useBoard();
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -25,10 +26,24 @@ export function SignupPage() {
   }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data: SignupFormData) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    login(data.email);
-    toast.success(`${data.name}님, 환영합니다!`);
-    navigate('/');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v2/user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: data.name, username: data.email, password: data.password }),
+      });
+
+      if (!response.ok) {
+        const resData = await response.json().catch(() => ({}));
+        toast.error(resData.message ?? '회원가입에 실패했습니다.');
+        return;
+      }
+
+      toast.success(`${data.name}님, 가입이 완료되었습니다! 로그인해주세요.`);
+      navigate('/login');
+    } catch {
+      toast.error('서버에 연결할 수 없습니다.');
+    }
   };
 
   const password = watch('password');

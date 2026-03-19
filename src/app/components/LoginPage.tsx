@@ -16,7 +16,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useBoard();
   const [step, setStep] = useState<'email' | 'password'>('email');
-  const [email, setEmail] = useState('');
+  const [username, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   React.useEffect(() => {
@@ -35,17 +35,24 @@ export function LoginPage() {
       const response = await fetch(`${API_BASE_URL}/api/v2/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
         toast.error(data.message ?? '로그인에 실패했습니다.');
         return;
       }
 
-      login(email);
-      toast.success(`${email}님 환영합니다!`);
+      const token: string = data.token ?? data.accessToken ?? data.access_token ?? '';
+      if (!token) {
+        toast.error('토큰을 받지 못했습니다.');
+        return;
+      }
+
+      login(token);
+      toast.success(`${username}님 환영합니다!`);
       navigate('/');
     } catch {
       toast.error('서버에 연결할 수 없습니다.');
@@ -148,7 +155,7 @@ export function LoginPage() {
                     이메일 변경
                   </button>
                   <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-                    {email}
+                    {username}
                   </span>
                 </div>
 
