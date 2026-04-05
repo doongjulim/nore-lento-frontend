@@ -7,9 +7,9 @@ export const currentUser: User = {
 };
 
 export const categories: Category[] = [
-  { id: 'notice', label: '공지사항' },
-  { id: 'qna', label: 'Q&A' },
-  { id: 'free', label: '자유게시판' },
+  { id: 'NOTICE', label: '공지사항' },
+  { id: 'QA', label: 'Q&A' },
+  { id: 'FREE', label: '자유게시판' },
 ];
 
 export const mockPosts: Post[] = [

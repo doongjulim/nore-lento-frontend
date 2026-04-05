@@ -1,3 +1,9 @@
+export interface Attachment {
+  name: string;
+  url: string;
+  type?: 'image' | 'file';
+}
+
 export interface User {
   id: string;
   name: string;
@@ -23,6 +29,7 @@ export interface Post {
   commentCount: number;
   category: 'notice' | 'free' | 'qna';
   likes: number;
+  attachments?: Attachment[];
 }
 
 export type Category = {

@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Post, Comment, User, Product } from '../types';
+import { Post, Comment, User, Product, Attachment } from '../types';
 import { mockPosts, mockComments, currentUser as defaultUser } from '../mockData';
 import { products as initialProducts } from '../mockProducts';
 
 interface BoardContextType {
   posts: Post[];
   comments: Comment[];
-  addPost: (title: string, content: string, category: string) => void;
+  addPost: (title: string, content: string, category: string, attachments?: Attachment[]) => void;
   addComment: (postId: string, content: string) => void;
   currentUser: User | null;
   login: (token: string) => void;
@@ -75,7 +75,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...currentUser, ...updates });
   };
 
-  const addPost = (title: string, content: string, category: string) => {
+  const addPost = (title: string, content: string, category: string, attachments?: Attachment[]) => {
     if (!currentUser) return;
     const newPost: Post = {
       id: `p${Date.now()}`,
@@ -87,6 +87,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       viewCount: 0,
       commentCount: 0,
       likes: 0,
+      attachments: attachments ?? [],
     };
     setPosts([newPost, ...posts]);
   };

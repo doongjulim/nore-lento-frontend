@@ -46,7 +46,7 @@ export function PostList({ category }: PostListProps) {
 
     const fetchPosts = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v2/notice?category=${category}`);
+        const res = await fetch(`${API_BASE_URL}/api/v2/notice?category=${category.toUpperCase()}`);
         if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
         const json = await res.json();
         const data: Post[] = Array.isArray(json) ? json : (json?.data ?? json?.content ?? []);
@@ -149,21 +149,21 @@ export function PostList({ category }: PostListProps) {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <img
+                        {/*<img
                           src={post.author.avatar}
-                          alt={post.author.name}
+                          alt={post.name}
                           className="w-6 h-6 rounded-full object-cover"
-                        />
+                        />*/}
                         <span className="text-gray-900 font-medium truncate max-w-[80px]">
-                          {post.author.name}
+                          {post.name}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center text-gray-500 whitespace-nowrap">
-                      {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ko })}
+                      {formatDistanceToNow(new Date(post.createAt), { addSuffix: true, locale: ko })}
                     </td>
                     <td className="px-6 py-4 text-center text-gray-500 font-mono text-xs">
-                      {post.viewCount.toLocaleString()}
+                      {/*{post.viewCount.toLocaleString()}*/}
                     </td>
                   </motion.tr>
                 ))}

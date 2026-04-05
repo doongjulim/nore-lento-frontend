@@ -9,12 +9,57 @@ import {
   Clock,
   Eye,
   Send,
-  LogIn
+  LogIn,
+  Paperclip,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useBoard } from '../context/BoardContext';
+
+function renderContent(content: string) {
+  const imgPattern = /(!\[[^\]]*\]\([^)]*\))/g;
+  const parts = content.split(imgPattern);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const imgMatch = part.match(/^!\[([^\]]*)\]\(([^)]*)\)$/);
+        if (imgMatch) {
+          return (
+            <img
+              key={i}
+              src={imgMatch[2]}
+              alt={imgMatch[1]}
+              className="max-w-full rounded-xl my-3 border border-gray-100 shadow-sm"
+            />
+          );
+        }
+        const linkParts = part.split(/(\[[^\]]+\]\([^)]+\))/g);
+        return (
+          <span key={i} className="whitespace-pre-wrap">
+            {linkParts.map((lp, j) => {
+              const lm = lp.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+              if (lm) {
+                return (
+                  <a
+                    key={j}
+                    href={lm[2]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 hover:underline"
+                  >
+                    {lm[1]}
+                  </a>
+                );
+              }
+              return lp;
+            })}
+          </span>
+        );
+      })}
+    </>
+  );
+}
 
 export function PostDetail() {
   const { id } = useParams<{ id: string }>();
@@ -118,9 +163,56 @@ export function PostDetail() {
             </div>
           </div>
 
-          <div className="mt-8 prose prose-indigo max-w-none text-gray-700 leading-relaxed min-h-[200px] whitespace-pre-wrap">
-            {post.content}
+          <div className="mt-8 prose prose-indigo max-w-none text-gray-700 leading-relaxed min-h-[200px]">
+            {renderContent(post.content)}
           </div>
+
+          {(() => {
+            const images = post.attachments?.filter(a => a.type === 'image') ?? [];
+            const files = post.attachments?.filter(a => a.type !== 'image') ?? [];
+            return (
+              <>
+                {images.length > 0 && (
+                  <div className="mt-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {images.map((img, i) => (
+                        <a key={i} href={img.url} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={img.url}
+                            alt={img.name}
+                            className="w-full rounded-xl border border-gray-100 shadow-sm object-cover hover:opacity-90 transition-opacity"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {files.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                      <Paperclip size={13} />
+                      첨부 파일 ({files.length})
+                    </p>
+                    <div className="space-y-2">
+                      {files.map((att, i) => (
+                        <a
+                          key={i}
+                          href={att.url}
+                          download={att.name}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-lg transition-colors group"
+                        >
+                          <Paperclip size={15} className="text-gray-400 group-hover:text-indigo-500" />
+                          <span className="text-sm text-gray-700 group-hover:text-indigo-700 truncate">{att.name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Actions */}
