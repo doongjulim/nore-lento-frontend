@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import {
@@ -12,7 +12,11 @@ import {
   LogOut,
   LogIn,
   ShoppingBag,
-  ShieldCheck
+  ShoppingCart,
+  ShieldCheck,
+  ClipboardList,
+  Heart,
+  User,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -22,36 +26,12 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const mockNotifications = [
-  { id: 1, message: '새 댓글이 달렸습니다.', time: '방금 전', read: false },
-  { id: 2, message: '새 게시글이 등록되었습니다.', time: '5분 전', read: false },
-  { id: 3, message: '문의하신 상품이 입고되었습니다.', time: '1시간 전', read: true },
-];
-
 export function BoardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
   const notifRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { currentUser, logout } = useBoard();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setIsNotifOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  function markAllRead() {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }
 
   const shopItems = [
     { icon: ShoppingBag, label: '쇼핑', path: '/shop' },
@@ -61,6 +41,13 @@ export function BoardLayout({ children }: { children: React.ReactNode }) {
     { icon: Megaphone, label: '공지사항', path: '/notice' },
     { icon: HelpCircle, label: 'Q&A', path: '/qna' },
     { icon: MessageSquare, label: '자유게시판', path: '/free' },
+  ];
+
+  const myItems = [
+    { icon: User, label: '마이페이지', path: '/mypage' },
+    { icon: ClipboardList, label: '주문 내역', path: '/orders' },
+    { icon: Heart, label: '위시리스트', path: '/wishlist' },
+    { icon: Bell, label: '알림', path: '/notifications' },
   ];
 
   const bottomItems = [
@@ -147,6 +134,37 @@ export function BoardLayout({ children }: { children: React.ReactNode }) {
               })}
             </div>
           </div>
+
+          {/* 구분선 */}
+          <div className="border-t border-gray-100" />
+
+          {/* 내 계정 (로그인 시에만) */}
+          {currentUser && (
+            <div>
+              <p className="px-3 mb-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">내 계정</p>
+              <div className="space-y-0.5">
+                {myItems.map((item) => {
+                  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-indigo-50 text-indigo-700"
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                      )}
+                      onClick={() => setIsSidebarOpen(false)}
+                    >
+                      <item.icon size={18} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* 구분선 */}
           <div className="border-t border-gray-100" />
@@ -261,63 +279,45 @@ export function BoardLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* 장바구니 아이콘 – 항상 표시 */}
+            <button
+              onClick={() => navigate('/cart')}
+              className={cn(
+                "relative p-2 rounded-full transition-colors",
+                location.pathname === '/cart'
+                  ? "text-indigo-600 bg-indigo-50"
+                  : "text-gray-500 hover:bg-gray-100"
+              )}
+              title="장바구니"
+            >
+              <ShoppingCart size={20} />
+            </button>
+
             {currentUser ? (
               <>
-                <div className="relative" ref={notifRef}>
-                  <button
-                    onClick={() => setIsNotifOpen(prev => !prev)}
-                    className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Bell size={20} />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-                    )}
-                  </button>
-
-                  {isNotifOpen && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                        <span className="text-sm font-semibold text-gray-900">알림</span>
-                        {unreadCount > 0 && (
-                          <button
-                            onClick={markAllRead}
-                            className="text-xs text-indigo-600 hover:underline"
-                          >
-                            모두 읽음
-                          </button>
-                        )}
-                      </div>
-                      <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
-                        {notifications.length === 0 ? (
-                          <li className="px-4 py-6 text-center text-sm text-gray-400">알림이 없습니다.</li>
-                        ) : (
-                          notifications.map(n => (
-                            <li
-                              key={n.id}
-                              className={cn(
-                                "flex items-start gap-3 px-4 py-3 text-sm",
-                                !n.read ? "bg-indigo-50/50" : "bg-white"
-                              )}
-                            >
-                              <span className={cn("mt-1.5 w-2 h-2 rounded-full flex-shrink-0", !n.read ? "bg-indigo-500" : "bg-gray-200")} />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-gray-800">{n.message}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">{n.time}</p>
-                              </div>
-                            </li>
-                          ))
-                        )}
-                      </ul>
-                    </div>
+                {/* 알림 아이콘 – 알림 페이지로 이동 */}
+                <button
+                  ref={notifRef as React.RefObject<HTMLButtonElement>}
+                  onClick={() => navigate('/notifications')}
+                  className={cn(
+                    "relative p-2 rounded-full transition-colors",
+                    location.pathname === '/notifications'
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-gray-500 hover:bg-gray-100"
                   )}
-                </div>
+                  title="알림"
+                >
+                  <Bell size={20} />
+                </button>
                 <div className="hidden sm:flex items-center gap-2 pl-1 border-l border-gray-200">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <span className="text-sm font-medium text-gray-700 hidden md:block">{currentUser.name}</span>
+                  <button onClick={() => navigate('/mypage')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span className="text-sm font-medium text-gray-700 hidden md:block">{currentUser.name}</span>
+                  </button>
                   <button
                     onClick={logout}
                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"

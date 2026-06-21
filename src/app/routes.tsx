@@ -10,6 +10,13 @@ import { SettingsPage } from './components/SettingsPage';
 import { ShopPage } from './components/ShopPage';
 import { ProductDetailPage } from './components/ProductDetailPage';
 import { AdminPage } from './components/AdminPage';
+import { CartPage } from './components/CartPage';
+import { CheckoutPage } from './components/CheckoutPage';
+import { OrdersPage } from './components/OrdersPage';
+import { OrderDetailPage } from './components/OrderDetailPage';
+import { NotificationsPage } from './components/NotificationsPage';
+import { WishlistPage } from './components/WishlistPage';
+import { MyPage } from './components/MyPage';
 import { useBoard } from './context/BoardContext';
 
 function RequireAuth() {
@@ -48,6 +55,13 @@ export const router = createBrowserRouter([
       {
         element: <RequireAuth />,
         children: [
+          { path: "/cart", Component: CartPage },
+          { path: "/checkout", Component: CheckoutPage },
+          { path: "/orders", Component: OrdersPage },
+          { path: "/orders/:id", Component: OrderDetailPage },
+          { path: "/notifications", Component: NotificationsPage },
+          { path: "/wishlist", Component: WishlistPage },
+          { path: "/mypage", Component: MyPage },
           { path: "/write", Component: PostEditor },
           { path: "/settings", Component: SettingsPage },
           { path: "/admin", Component: AdminPage },

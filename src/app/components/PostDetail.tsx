@@ -1,234 +1,239 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
   ThumbsUp,
   Share2,
-  MoreHorizontal,
   Clock,
-  Eye,
   Send,
   LogIn,
-  Paperclip,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useBoard } from '../context/BoardContext';
+import { noticeApi } from '@/app/api';
+import type { FindNoticeDetailResponse } from '@/app/api';
 
-function renderContent(content: string) {
-  const imgPattern = /(!\[[^\]]*\]\([^)]*\))/g;
-  const parts = content.split(imgPattern);
-  return (
-    <>
-      {parts.map((part, i) => {
-        const imgMatch = part.match(/^!\[([^\]]*)\]\(([^)]*)\)$/);
-        if (imgMatch) {
-          return (
-            <img
-              key={i}
-              src={imgMatch[2]}
-              alt={imgMatch[1]}
-              className="max-w-full rounded-xl my-3 border border-gray-100 shadow-sm"
-            />
-          );
-        }
-        const linkParts = part.split(/(\[[^\]]+\]\([^)]+\))/g);
-        return (
-          <span key={i} className="whitespace-pre-wrap">
-            {linkParts.map((lp, j) => {
-              const lm = lp.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-              if (lm) {
-                return (
-                  <a
-                    key={j}
-                    href={lm[2]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-600 hover:underline"
-                  >
-                    {lm[1]}
-                  </a>
-                );
-              }
-              return lp;
-            })}
-          </span>
-        );
-      })}
-    </>
-  );
-}
+const CATEGORY_LABEL: Record<string, string> = {
+  NOTICE: '공지사항',
+  QA: 'Q&A',
+  FREE: '자유게시판',
+};
 
 export function PostDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { posts, comments, addComment, currentUser } = useBoard();
+  const { comments, addComment, currentUser } = useBoard();
   const [commentText, setCommentText] = useState('');
 
-  const post = posts.find(p => p.id === id);
-  const postComments = comments.filter(c => c.postId === id);
+  // ── 백엔드에서 게시글 조회 ──
+  const [notice, setNotice] = useState<FindNoticeDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!post) {
+  // ── 좋아요 상태 ──
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [liking, setLiking] = useState(false);
+
+  // ── 댓글 (로컬 컨텍스트 사용) ──
+  const postComments = comments.filter((c) => c.postId === id);
+
+  const numericId = id ? parseInt(id, 10) : NaN;
+
+  useEffect(() => {
+    if (isNaN(numericId)) {
+      setError('유효하지 않은 게시글 ID입니다.');
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    noticeApi
+      .findNoticeDetail(numericId)
+      .then((data) => {
+        setNotice(data);
+        setLikeCount(data.likeCount);
+      })
+      .catch((err) => {
+        setError(err?.message ?? '게시글을 불러오지 못했습니다.');
+      })
+      .finally(() => setLoading(false));
+  }, [numericId]);
+
+  // ── 좋아요 토글 ──
+  const handleLike = async () => {
+    if (!currentUser) {
+      toast.error('로그인 후 이용할 수 있습니다.');
+      navigate('/login');
+      return;
+    }
+    if (liking || isNaN(numericId)) return;
+    setLiking(true);
+    try {
+      if (liked) {
+        await noticeApi.unlikeNotice(numericId);
+        setLikeCount((n) => Math.max(0, n - 1));
+        setLiked(false);
+      } else {
+        await noticeApi.likeNotice(numericId);
+        setLikeCount((n) => n + 1);
+        setLiked(true);
+      }
+    } catch {
+      toast.error('좋아요 처리에 실패했습니다.');
+    } finally {
+      setLiking(false);
+    }
+  };
+
+  // ── 공유 ──
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('링크가 복사되었습니다.');
+    } catch {
+      toast.info('주소창의 URL을 복사해 공유하세요.');
+    }
+  };
+
+  // ── 댓글 등록 ──
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim() || !id) return;
+    addComment(id, commentText);
+    setCommentText('');
+    toast.success('댓글이 등록되었습니다.');
+  };
+
+  // ── 로딩 ──
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500">
-        <h2 className="text-xl font-bold mb-2">게시글을 찾을 수 없습니다.</h2>
-        <button 
-          onClick={() => navigate(-1)}
-          className="text-indigo-600 hover:underline"
-        >
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // ── 에러 ──
+  if (error || !notice) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-gray-500">
+        <AlertCircle size={40} className="text-gray-300" />
+        <h2 className="text-xl font-bold">{error ?? '게시글을 찾을 수 없습니다.'}</h2>
+        <button onClick={() => navigate(-1)} className="text-indigo-600 hover:underline text-sm">
           돌아가기
         </button>
       </div>
     );
   }
 
-
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-
-    if (!id) return;
-
-    addComment(id, commentText);
-    setCommentText('');
-    toast.success('댓글이 등록되었습니다.');
-  };
-
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className="max-w-4xl mx-auto space-y-8 pb-20"
     >
-      {/* Header Navigation */}
+      {/* 헤더 네비게이션 */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => navigate('/board')}
+          onClick={() => navigate(-1)}
           className="flex items-center text-gray-500 hover:text-gray-900 transition-colors gap-2"
         >
           <ArrowLeft size={20} />
           <span className="font-medium">목록으로</span>
         </button>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+          <button
+            onClick={handleShare}
+            className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"
+            title="공유하기"
+          >
             <Share2 size={20} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
-            <MoreHorizontal size={20} />
           </button>
         </div>
       </div>
 
-      {/* Post Content */}
+      {/* 게시글 본문 */}
       <article className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-8 border-b border-gray-100">
+          {/* 카테고리 + 날짜 */}
           <div className="flex items-center gap-2 mb-4">
             <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wide">
-              {post.category}
+              {CATEGORY_LABEL[notice.category] ?? notice.category}
             </span>
             <span className="text-gray-400 text-sm flex items-center gap-1">
               <Clock size={14} />
-              {format(new Date(post.createdAt), 'yyyy.MM.dd HH:mm', { locale: ko })}
+              {format(new Date(notice.createAt), 'yyyy.MM.dd HH:mm', { locale: ko })}
             </span>
           </div>
 
+          {/* 제목 */}
           <h1 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">
-            {post.title}
+            {notice.title}
           </h1>
 
+          {/* 작성자 + 좋아요 수 */}
           <div className="flex items-center justify-between pb-6 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <img 
-                src={post.author.avatar} 
-                alt={post.author.name} 
-                className="w-10 h-10 rounded-full border border-gray-100" 
-              />
+              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+                {(notice.createBy ?? '?')[0].toUpperCase()}
+              </div>
               <div>
-                <p className="font-medium text-gray-900">{post.author.name}</p>
-                <p className="text-xs text-gray-500">Level 5 · Developer</p>
+                <p className="font-medium text-gray-900">{notice.createBy}</p>
+                <p className="text-xs text-gray-500">
+                  {notice.updateAt && notice.updateAt !== notice.createAt
+                    ? `수정됨 · ${format(new Date(notice.updateAt), 'yyyy.MM.dd', { locale: ko })}`
+                    : ''}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-gray-400 text-sm">
-              <span className="flex items-center gap-1">
-                <Eye size={16} />
-                {post.viewCount}
-              </span>
-              <span className="flex items-center gap-1 text-indigo-600 font-medium">
-                <ThumbsUp size={16} />
-                {post.likes}
-              </span>
+            <div className="flex items-center gap-2 text-sm text-indigo-600 font-semibold">
+              <ThumbsUp size={16} />
+              {likeCount}
             </div>
           </div>
 
-          <div className="mt-8 prose prose-indigo max-w-none text-gray-700 leading-relaxed min-h-[200px]">
-            {renderContent(post.content)}
+          {/* 본문 */}
+          <div className="mt-8 text-gray-700 leading-relaxed whitespace-pre-wrap min-h-[160px] text-[15px]">
+            {notice.content}
           </div>
-
-          {(() => {
-            const images = post.attachments?.filter(a => a.type === 'image') ?? [];
-            const files = post.attachments?.filter(a => a.type !== 'image') ?? [];
-            return (
-              <>
-                {images.length > 0 && (
-                  <div className="mt-6">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {images.map((img, i) => (
-                        <a key={i} href={img.url} target="_blank" rel="noopener noreferrer">
-                          <img
-                            src={img.url}
-                            alt={img.name}
-                            className="w-full rounded-xl border border-gray-100 shadow-sm object-cover hover:opacity-90 transition-opacity"
-                          />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {files.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                      <Paperclip size={13} />
-                      첨부 파일 ({files.length})
-                    </p>
-                    <div className="space-y-2">
-                      {files.map((att, i) => (
-                        <a
-                          key={i}
-                          href={att.url}
-                          download={att.name}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 rounded-lg transition-colors group"
-                        >
-                          <Paperclip size={15} className="text-gray-400 group-hover:text-indigo-500" />
-                          <span className="text-sm text-gray-700 group-hover:text-indigo-700 truncate">{att.name}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
         </div>
 
-        {/* Actions */}
+        {/* 좋아요 / 공유 액션 */}
         <div className="bg-gray-50 px-8 py-4 flex items-center justify-center gap-4 border-t border-gray-100">
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm">
-            <ThumbsUp size={18} />
-            <span className="font-medium">좋아요 {post.likes}</span>
+          <button
+            onClick={handleLike}
+            disabled={liking}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border font-medium transition-all shadow-sm disabled:opacity-60 ${
+              liked
+                ? 'bg-indigo-600 border-indigo-600 text-white'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-indigo-50 hover:border-indigo-300'
+            }`}
+          >
+            {liking ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <ThumbsUp size={18} />
+            )}
+            좋아요 {likeCount}
           </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm">
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+          >
             <Share2 size={18} />
-            <span className="font-medium">공유하기</span>
+            공유하기
           </button>
         </div>
       </article>
 
-      {/* Comments Section */}
+      {/* 댓글 섹션 */}
       <section className="bg-gray-50 rounded-2xl p-8 border border-gray-200/50">
         <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
           댓글 <span className="text-indigo-600">{postComments.length}</span>
@@ -237,9 +242,9 @@ export function PostDetail() {
         <div className="space-y-6 mb-8">
           {postComments.map((comment) => (
             <div key={comment.id} className="flex gap-4 group">
-              <img 
-                src={comment.author.avatar} 
-                alt={comment.author.name} 
+              <img
+                src={comment.author.avatar}
+                alt={comment.author.name}
                 className="w-8 h-8 rounded-full flex-shrink-0"
               />
               <div className="flex-1 space-y-1">
@@ -254,9 +259,6 @@ export function PostDetail() {
                 <p className="text-gray-700 text-sm leading-relaxed bg-white p-3 rounded-r-xl rounded-bl-xl shadow-sm border border-gray-100 inline-block">
                   {comment.content}
                 </p>
-                <button className="text-xs text-gray-400 hover:text-gray-600 block pt-1">
-                  답글 달기
-                </button>
               </div>
             </div>
           ))}
@@ -265,14 +267,14 @@ export function PostDetail() {
           )}
         </div>
 
-        {/* Comment Input */}
+        {/* 댓글 입력 */}
         {currentUser ? (
           <form onSubmit={handleAddComment} className="relative">
             <div className="flex items-start gap-4">
               <img
                 src={currentUser.avatar}
                 alt={currentUser.name}
-                className="w-8 h-8 rounded-full mt-1"
+                className="w-8 h-8 rounded-full mt-1 flex-shrink-0"
               />
               <div className="flex-1 relative">
                 <textarea
