@@ -18,6 +18,8 @@ export * as reviewApi from "./reviews";
 export * as notificationApi from "./notifications";
 export * as wishlistApi from "./wishlist";
 export * as pointApi from "./points";
+export * as couponApi from "./coupons";
+export * as shippingAddressApi from "./shippingAddresses";
 
 export {
   httpClient,
@@ -92,4 +94,12 @@ export type {
   PointResponse,
   PointHistoryResponse,
   CouponResponse,
+  MyCouponResponse,
+  IssueCouponRequest,
+  UpdateCouponRequest,
+  DiscountType,
+  // ShippingAddress
+  ShippingAddressResponse,
+  SaveShippingAddressRequest,
+  UpdateShippingAddressRequest,
 } from "./types";

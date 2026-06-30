@@ -9,11 +9,13 @@ import {
   Wallet,
   CheckCircle2,
   Loader2,
+  Star,
+  ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { cartApi, orderApi, paymentApi } from '@/app/api';
-import type { CartItemResponse, FindCartResponse, PaymentMethod } from '@/app/api';
+import { cartApi, orderApi, paymentApi, shippingAddressApi } from '@/app/api';
+import type { CartItemResponse, FindCartResponse, PaymentMethod, ShippingAddressResponse } from '@/app/api';
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
   { value: 'CARD', label: '신용카드', icon: CreditCard },
@@ -44,15 +46,30 @@ function OrderItemRow({ item }: { item: CartItemResponse }) {
 export function CheckoutPage() {
   const navigate = useNavigate();
   const [cart, setCart] = useState<FindCartResponse | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<ShippingAddressResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [address, setAddress] = useState('');
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CARD');
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    cartApi.findCart()
-      .then(setCart)
+    Promise.all([
+      cartApi.findCart(),
+      shippingAddressApi.findShippingAddresses().catch(() => [] as ShippingAddressResponse[]),
+    ])
+      .then(([cartData, addrs]) => {
+        setCart(cartData);
+        setSavedAddresses(addrs);
+        const def = addrs.find((a) => a.isDefault);
+        if (def) {
+          setSelectedAddressId(def.id);
+          const full = [def.address, def.detailAddress].filter(Boolean).join(' ');
+          setAddress(full);
+        }
+      })
       .catch(() => toast.error('장바구니를 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
   }, []);
@@ -154,18 +171,76 @@ export function CheckoutPage() {
 
           {/* 배송지 */}
           <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <MapPin size={16} className="text-indigo-500" />
-              <h3 className="font-bold text-gray-900">배송지 정보</h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-indigo-500" />
+                <h3 className="font-bold text-gray-900">배송지 정보</h3>
+              </div>
+              {savedAddresses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddressPicker((v) => !v)}
+                  className="flex items-center gap-1 text-xs text-indigo-600 hover:underline font-medium"
+                >
+                  저장된 배송지
+                  <ChevronDown size={12} className={showAddressPicker ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                </button>
+              )}
             </div>
+
+            {/* 저장된 배송지 선택 */}
+            {showAddressPicker && savedAddresses.length > 0 && (
+              <div className="mb-3 border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+                {savedAddresses.map((addr) => (
+                  <button
+                    key={addr.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAddressId(addr.id);
+                      const full = [addr.address, addr.detailAddress].filter(Boolean).join(' ');
+                      setAddress(full);
+                      setShowAddressPicker(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+                      selectedAddressId === addr.id
+                        ? 'bg-indigo-50 text-indigo-700'
+                        : 'hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-semibold">{addr.recipientName}</span>
+                      <span className="text-gray-400 text-xs">{addr.phone}</span>
+                      {addr.isDefault && (
+                        <span className="text-xs text-indigo-600 font-medium flex items-center gap-0.5">
+                          <Star size={10} className="fill-indigo-600" />기본
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      ({addr.zipCode}) {addr.address}{addr.detailAddress ? ` ${addr.detailAddress}` : ''}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <textarea
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => { setAddress(e.target.value); setSelectedAddressId(null); }}
               placeholder="배송받으실 주소를 입력해 주세요."
               rows={3}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
               required
             />
+            {savedAddresses.length === 0 && (
+              <p className="mt-1.5 text-xs text-gray-400">
+                배송지를 미리 저장하려면{' '}
+                <button type="button" onClick={() => navigate('/settings')} className="text-indigo-500 hover:underline">
+                  설정 &gt; 배송지 관리
+                </button>
+                에서 추가하세요.
+              </p>
+            )}
           </section>
 
           {/* 결제 수단 */}

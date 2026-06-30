@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   User,
-  Settings,
   Bell,
   Shield,
   Moon,
@@ -19,18 +18,215 @@ import {
   EyeOff,
   Loader2,
   AlertTriangle,
+  MapPin,
+  Plus,
+  Pencil,
+  Trash2,
+  Star,
+  X,
 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
-import { userApi } from '@/app/api';
+import { userApi, shippingAddressApi } from '@/app/api';
+import type { ShippingAddressResponse, SaveShippingAddressRequest } from '@/app/api';
 import { toast } from 'sonner';
 
-type Tab = 'profile' | 'account' | 'notifications' | 'appearance' | 'data';
+type Tab = 'profile' | 'account' | 'shipping' | 'notifications' | 'appearance' | 'data';
+
+const emptyAddressForm: SaveShippingAddressRequest = {
+  recipientName: '',
+  phone: '',
+  address: '',
+  detailAddress: '',
+  zipCode: '',
+  isDefault: false,
+};
+
+function ShippingAddressForm({
+  initial,
+  onSave,
+  onCancel,
+  saving,
+}: {
+  initial: SaveShippingAddressRequest;
+  onSave: (v: SaveShippingAddressRequest) => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const [form, setForm] = useState(initial);
+  const set = (k: keyof SaveShippingAddressRequest, v: string | boolean) =>
+    setForm((prev) => ({ ...prev, [k]: v }));
+
+  return (
+    <div className="border border-indigo-200 rounded-xl p-4 bg-indigo-50/40 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">받는 분 *</label>
+          <input
+            value={form.recipientName}
+            onChange={(e) => set('recipientName', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder="홍길동"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">연락처 *</label>
+          <input
+            value={form.phone}
+            onChange={(e) => set('phone', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder="010-0000-0000"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">주소 *</label>
+        <input
+          value={form.address}
+          onChange={(e) => set('address', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          placeholder="서울특별시 강남구 테헤란로 123"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">상세 주소</label>
+          <input
+            value={form.detailAddress ?? ''}
+            onChange={(e) => set('detailAddress', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder="101호"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">우편번호 *</label>
+          <input
+            value={form.zipCode}
+            onChange={(e) => set('zipCode', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder="06234"
+          />
+        </div>
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={form.isDefault}
+          onChange={(e) => set('isDefault', e.target.checked)}
+          className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+        />
+        <span className="text-sm text-gray-700">기본 배송지로 설정</span>
+      </label>
+      <div className="flex gap-2 pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            if (!form.recipientName || !form.phone || !form.address || !form.zipCode) {
+              toast.error('필수 항목을 모두 입력해주세요.');
+              return;
+            }
+            onSave(form);
+          }}
+          disabled={saving}
+          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        >
+          {saving ? <Loader2 size={13} className="animate-spin" /> : null}
+          저장
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          취소
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function SettingsPage() {
   const { currentUser, updateUser, logout, posts, comments } = useBoard();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // ── 배송지 상태 ──
+  const [addresses, setAddresses] = useState<ShippingAddressResponse[]>([]);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [savingAddress, setSavingAddress] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'shipping') return;
+    setAddressLoading(true);
+    shippingAddressApi.findShippingAddresses()
+      .then(setAddresses)
+      .catch(() => toast.error('배송지를 불러오지 못했습니다.'))
+      .finally(() => setAddressLoading(false));
+  }, [activeTab]);
+
+  const handleAddAddress = async (form: SaveShippingAddressRequest) => {
+    setSavingAddress(true);
+    try {
+      await shippingAddressApi.saveShippingAddress(form);
+      const updated = await shippingAddressApi.findShippingAddresses();
+      setAddresses(updated);
+      setShowAddForm(false);
+      toast.success('배송지가 추가되었습니다.');
+    } catch {
+      toast.error('배송지 추가에 실패했습니다.');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleUpdateAddress = async (id: number, form: SaveShippingAddressRequest) => {
+    setSavingAddress(true);
+    try {
+      await shippingAddressApi.updateShippingAddress(id, {
+        recipientName: form.recipientName,
+        phone: form.phone,
+        address: form.address,
+        detailAddress: form.detailAddress,
+        zipCode: form.zipCode,
+      });
+      if (form.isDefault) {
+        await shippingAddressApi.setDefaultShippingAddress(id);
+      }
+      const updated = await shippingAddressApi.findShippingAddresses();
+      setAddresses(updated);
+      setEditingId(null);
+      toast.success('배송지가 수정되었습니다.');
+    } catch {
+      toast.error('배송지 수정에 실패했습니다.');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (id: number) => {
+    if (!window.confirm('배송지를 삭제하시겠습니까?')) return;
+    try {
+      await shippingAddressApi.deleteShippingAddress(id);
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      toast.success('배송지가 삭제되었습니다.');
+    } catch {
+      toast.error('배송지 삭제에 실패했습니다.');
+    }
+  };
+
+  const handleSetDefault = async (id: number) => {
+    try {
+      await shippingAddressApi.setDefaultShippingAddress(id);
+      setAddresses((prev) =>
+        prev.map((a) => ({ ...a, isDefault: a.id === id })),
+      );
+      toast.success('기본 배송지가 변경되었습니다.');
+    } catch {
+      toast.error('기본 배송지 변경에 실패했습니다.');
+    }
+  };
 
   // ── 비밀번호 변경 상태 ──
   const [currentPassword, setCurrentPassword] = useState('');
@@ -154,6 +350,7 @@ export function SettingsPage() {
   const tabs = [
     { id: 'profile', label: '프로필 편집', icon: User },
     { id: 'account', label: '계정 설정', icon: Shield },
+    { id: 'shipping', label: '배송지 관리', icon: MapPin },
     { id: 'notifications', label: '알림', icon: Bell },
     { id: 'appearance', label: '테마 및 언어', icon: Moon },
     { id: 'data', label: '데이터 관리', icon: Database },
@@ -404,6 +601,118 @@ export function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* ── 배송지 관리 ── */}
+              {activeTab === 'shipping' && (
+                <div className="p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-bold text-gray-900">배송지 관리</h2>
+                    {!showAddForm && (
+                      <button
+                        onClick={() => { setShowAddForm(true); setEditingId(null); }}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        <Plus size={14} />
+                        배송지 추가
+                      </button>
+                    )}
+                  </div>
+
+                  {showAddForm && (
+                    <div className="mb-4">
+                      <ShippingAddressForm
+                        initial={emptyAddressForm}
+                        onSave={handleAddAddress}
+                        onCancel={() => setShowAddForm(false)}
+                        saving={savingAddress}
+                      />
+                    </div>
+                  )}
+
+                  {addressLoading ? (
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                    </div>
+                  ) : addresses.length === 0 && !showAddForm ? (
+                    <div className="text-center py-12 text-gray-400">
+                      <MapPin size={36} className="mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">등록된 배송지가 없습니다.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {addresses.map((addr) => (
+                        <div key={addr.id}>
+                          {editingId === addr.id ? (
+                            <ShippingAddressForm
+                              initial={{
+                                recipientName: addr.recipientName,
+                                phone: addr.phone,
+                                address: addr.address,
+                                detailAddress: addr.detailAddress ?? '',
+                                zipCode: addr.zipCode,
+                                isDefault: addr.isDefault,
+                              }}
+                              onSave={(form) => handleUpdateAddress(addr.id, form)}
+                              onCancel={() => setEditingId(null)}
+                              saving={savingAddress}
+                            />
+                          ) : (
+                            <div className={`border rounded-xl p-4 transition-colors ${
+                              addr.isDefault
+                                ? 'border-indigo-300 bg-indigo-50/50'
+                                : 'border-gray-200 bg-white'
+                            }`}>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-sm font-bold text-gray-900">{addr.recipientName}</p>
+                                    <span className="text-xs text-gray-400">{addr.phone}</span>
+                                    {addr.isDefault && (
+                                      <span className="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        <Star size={10} className="fill-indigo-600" />
+                                        기본
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-700">
+                                    ({addr.zipCode}) {addr.address}
+                                    {addr.detailAddress && ` ${addr.detailAddress}`}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  {!addr.isDefault && (
+                                    <button
+                                      onClick={() => handleSetDefault(addr.id)}
+                                      className="p-1.5 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                                      title="기본 배송지로 설정"
+                                    >
+                                      <Star size={14} />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => { setEditingId(addr.id); setShowAddForm(false); }}
+                                    className="p-1.5 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                                    title="수정"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteAddress(addr.id)}
+                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="삭제"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

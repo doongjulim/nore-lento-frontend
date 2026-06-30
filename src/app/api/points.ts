@@ -1,20 +1,11 @@
 import { httpClient } from "./httpClient";
 import type {
-  CouponResponse,
+  MyCouponResponse,
   PointHistoryResponse,
   PointResponse,
   SpringPage,
   SpringPageRequest,
 } from "./types";
-
-/**
- * 포인트/쿠폰 도메인 API
- *
- * 백엔드 라우트
- *   GET /api/v2/point             - 내 포인트 잔액
- *   GET /api/v2/point/history     - 포인트 사용 내역
- *   GET /api/v2/coupons/my        - 내 쿠폰 목록
- */
 
 export function findMyPoint() {
   return httpClient.get<PointResponse>("/api/v2/point");
@@ -28,5 +19,5 @@ export function findPointHistory(params: SpringPageRequest = {}) {
 }
 
 export function findMyCoupons() {
-  return httpClient.get<CouponResponse[]>("/api/v2/coupons/my");
+  return httpClient.get<MyCouponResponse[]>("/api/v2/coupons/mine");
 }

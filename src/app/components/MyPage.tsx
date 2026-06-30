@@ -14,10 +14,10 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { pointApi } from '@/app/api';
+import { pointApi, couponApi } from '@/app/api';
 import { useBoard } from '../context/BoardContext';
 import type {
-  CouponResponse,
+  MyMyCouponResponse,
   PointHistoryResponse,
   PointHistoryType,
 } from '@/app/api';
@@ -66,9 +66,13 @@ function PointHistoryRow({ item }: { item: PointHistoryResponse }) {
   );
 }
 
-function CouponCard({ coupon }: { coupon: CouponResponse }) {
-  const expired = new Date(coupon.expiredAt) < new Date();
-  const unavailable = coupon.used || expired;
+function CouponCard({ coupon }: { coupon: MyCouponResponse }) {
+  const expired = coupon.expiresAt ? new Date(coupon.expiresAt) < new Date() : false;
+  const unavailable = coupon.isUsed || expired;
+  const discountLabel =
+    coupon.discountType === 'RATE'
+      ? `${coupon.discountValue}% 할인`
+      : `${coupon.discountValue.toLocaleString()}원 할인`;
 
   return (
     <div className={`rounded-xl border-2 p-4 relative overflow-hidden ${
@@ -78,7 +82,7 @@ function CouponCard({ coupon }: { coupon: CouponResponse }) {
     }`}>
       {unavailable && (
         <span className="absolute top-2 right-2 text-xs font-bold text-gray-400 bg-gray-200 rounded px-1.5 py-0.5">
-          {coupon.used ? '사용됨' : '만료'}
+          {coupon.isUsed ? '사용됨' : '만료'}
         </span>
       )}
       <div className="flex items-start gap-3">
@@ -90,14 +94,18 @@ function CouponCard({ coupon }: { coupon: CouponResponse }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-900">{coupon.name}</p>
           <p className={`text-lg font-extrabold mt-0.5 ${unavailable ? 'text-gray-400' : 'text-indigo-600'}`}>
-            {coupon.discountAmount.toLocaleString()}원 할인
+            {discountLabel}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {coupon.minOrderAmount.toLocaleString()}원 이상 구매 시 사용 가능
-          </p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            만료일: {new Date(coupon.expiredAt).toLocaleDateString('ko-KR')}
-          </p>
+          {coupon.minOrderAmount != null && (
+            <p className="text-xs text-gray-500 mt-1">
+              {coupon.minOrderAmount.toLocaleString()}원 이상 구매 시 사용 가능
+            </p>
+          )}
+          {coupon.expiresAt && (
+            <p className="text-xs text-gray-400 mt-0.5">
+              만료일: {new Date(coupon.expiresAt).toLocaleDateString('ko-KR')}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -109,7 +117,8 @@ export function MyPage() {
   const { currentUser } = useBoard();
   const [point, setPoint] = useState<number | null>(null);
   const [history, setHistory] = useState<PointHistoryResponse[]>([]);
-  const [coupons, setCoupons] = useState<CouponResponse[]>([]);
+  const [coupons, setCoupons] = useState<MyCouponResponse[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllHistory, setShowAllHistory] = useState(false);
@@ -120,7 +129,7 @@ export function MyPage() {
     Promise.all([
       pointApi.findMyPoint(),
       pointApi.findPointHistory({ page: 0, size: 20 }),
-      pointApi.findMyCoupons(),
+      couponApi.findMyCoupons(),
     ])
       .then(([pointData, historyPage, couponList]) => {
         setPoint(pointData.point);
@@ -132,8 +141,8 @@ export function MyPage() {
   }, []);
 
   const visibleHistory = showAllHistory ? history : history.slice(0, 5);
-  const availableCoupons = coupons.filter((c) => !c.used && new Date(c.expiredAt) >= new Date());
-  const unavailableCoupons = coupons.filter((c) => c.used || new Date(c.expiredAt) < new Date());
+  const availableCoupons = coupons.filter((c) => !c.isUsed && (!c.expiresAt || new Date(c.expiresAt) >= new Date()));
+  const unavailableCoupons = coupons.filter((c) => c.isUsed || (c.expiresAt != null && new Date(c.expiresAt) < new Date()));
 
   return (
     <div className="max-w-xl mx-auto pb-12 space-y-5">

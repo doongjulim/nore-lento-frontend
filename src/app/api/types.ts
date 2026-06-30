@@ -310,11 +310,70 @@ export interface PointHistoryResponse {
 
 // ───── Coupon ─────
 
+export type DiscountType = "FIXED" | "RATE";
+
+/** 어드민용 쿠폰 목록 응답 (GET /api/v2/coupons) */
 export interface CouponResponse {
+  id: number;
+  name: string;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount: number | null;
+  expiresAt: string | null;
+}
+
+/** 내 쿠폰 응답 (GET /api/v2/coupons/mine) */
+export interface MyCouponResponse {
+  id: number;
   couponId: number;
   name: string;
-  discountAmount: number;
-  minOrderAmount: number;
-  expiredAt: string;
-  used: boolean;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount: number | null;
+  expiresAt: string | null;
+  isUsed: boolean;
+}
+
+export interface IssueCouponRequest {
+  name: string;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount?: number;
+  expiresAt?: string;
+}
+
+export interface UpdateCouponRequest {
+  name?: string;
+  discountValue?: number;
+  minOrderAmount?: number;
+  expiresAt?: string;
+}
+
+// ───── ShippingAddress ─────
+
+export interface ShippingAddressResponse {
+  id: number;
+  recipientName: string;
+  phone: string;
+  address: string;
+  detailAddress: string | null;
+  zipCode: string;
+  isDefault: boolean;
+}
+
+export interface SaveShippingAddressRequest {
+  recipientName: string;
+  phone: string;
+  address: string;
+  detailAddress?: string;
+  zipCode: string;
+  isDefault: boolean;
+}
+
+export interface UpdateShippingAddressRequest {
+  recipientName: string;
+  phone: string;
+  address: string;
+  detailAddress?: string;
+  zipCode: string;
 }

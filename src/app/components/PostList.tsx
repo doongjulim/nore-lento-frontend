@@ -54,7 +54,7 @@ export function PostList({ category }: PostListProps) {
 
   const fetchPosts = useCallback(async (pageNum: number) => {
     setLoading(true);
-    setError(null);
+    setError(null); 
     try {
       const data = await noticeApi.findNotices({
         category: toApiCategory[category],
